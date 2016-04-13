@@ -1,5 +1,7 @@
 package io.paradoxical;
 
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerCertificates;
@@ -58,7 +60,7 @@ public class DockerCreator {
                                                    .toArray(new String[]{}));
 
         if (config.getArguments() != null) {
-            configBuilder.cmd(config.getArguments());
+            configBuilder.cmd(Splitter.on(' ').splitToList(config.getArguments()));
         }
 
         addCustomConfigs(configBuilder);
