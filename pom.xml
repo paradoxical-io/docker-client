@@ -14,7 +14,7 @@
     <description>Docker client</description>
 
     <name>docker-client</name>
-    <url>http://maven.apache.org</url>
+    <url>https://github.com/paradoxical-io/docker-client</url>
 
     <licenses>
         <license>
