@@ -30,5 +30,6 @@ try (final Container client = DockerCreator.build(config)) {
     factory.setHost(client.getDockerHost());
     factory.setPort(client.getTargetPortToHostPortLookup().get(5672));
     factory.newConnection();
-}```
+}
+```
 
