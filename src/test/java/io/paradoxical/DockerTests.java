@@ -32,12 +32,12 @@ public class DockerTests {
     @Test
     public void docker_arguments_pass() throws InterruptedException, DockerException, DockerCertificateException {
         try (final Container client = DockerCreator.build(
-                DockerClientConfig.builder().
-                        imageName("vsouza/dynamo-local").
-                                          port(8080).
-                                          waitForLogLine("Listening at").
-                                          arguments("--port 8080 --createTableMs 5 --deleteTableMs 5 --updateTableMs 5").
-                                          build()
+                DockerClientConfig.builder()
+                                  .imageName("vsouza/dynamo-local")
+                                  .port(8080)
+                                  .waitForLogLine("Listening at")
+                                  .arguments("--port 8080 --createTableMs 5 --deleteTableMs 5 --updateTableMs 5")
+                                  .build()
         )) {
             assertThat(portIsOpen(client.getDockerHost(), client.getTargetPortToHostPortLookup().get(8080))).isTrue();
         }
