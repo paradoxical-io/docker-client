@@ -15,3 +15,20 @@ To install
 </dependency>
 ```
 
+Usage
+
+```
+final DockerClientConfig config =
+        DockerClientConfig.builder()
+                          .imageName("rabbitmq:management")
+                          .port(5672)
+                          .waitForLogLine("Server startup complete")
+                          .build();
+
+try (final Container client = DockerCreator.build(config)) {
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(client.getDockerHost());
+    factory.setPort(client.getTargetPortToHostPortLookup().get(5672));
+    factory.newConnection();
+}```
+
