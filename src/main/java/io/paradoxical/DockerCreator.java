@@ -1,7 +1,6 @@
 package io.paradoxical;
 
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerCertificates;

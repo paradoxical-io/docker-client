@@ -1,14 +1,14 @@
 package io.paradoxical;
 
-import com.godaddy.logging.Logger;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.DockerException;
 import com.spotify.docker.client.messages.ContainerInfo;
 import lombok.Value;
+import org.slf4j.Logger;
 
 import java.util.Map;
 
-import static com.godaddy.logging.LoggerFactory.getLogger;
+import static org.slf4j.LoggerFactory.getLogger;
 
 @Value
 public class Container implements AutoCloseable {
@@ -25,7 +25,7 @@ public class Container implements AutoCloseable {
             client.stopContainer(containerInfo.id(), 10);
         }
         catch (DockerException | InterruptedException e) {
-            logger.error(e, "Error stopping container");
+            logger.error("Error stopping container", e);
         }
 
         client.close();
