@@ -18,5 +18,5 @@ public class DockerClientConfig {
 
     private String arguments = null;
 
-    private List<Integer> ports
+    private List<Integer> ports;
 }
