@@ -21,10 +21,11 @@ import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import static com.spotify.docker.client.DockerClient.LogsParam.follow;
 import static com.spotify.docker.client.DockerClient.LogsParam.stdout;
@@ -40,9 +41,9 @@ public class DockerCreator {
 
         Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
-        config.getPorts().forEach(port -> {
+        for (Integer port : config.getPorts()) {
             portBindings.put(port.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", random.nextInt(30000) + 15000)));
-        });
+        }
 
         HostConfig hostConfig = HostConfig.builder()
                                           .portBindings(portBindings)
@@ -53,11 +54,7 @@ public class DockerCreator {
                                .hostConfig(hostConfig)
                                .image(config.getImageName())
                                .networkDisabled(false)
-                               .exposedPorts(config.getPorts()
-                                                   .stream()
-                                                   .map(Object::toString)
-                                                   .collect(Collectors.toList())
-                                                   .toArray(new String[]{}));
+                               .exposedPorts(getPorts(config.getPorts()));
 
         if (config.getArguments() != null) {
             configBuilder.cmd(Splitter.on(' ').splitToList(config.getArguments()));
@@ -83,20 +80,27 @@ public class DockerCreator {
 
         Map<Integer, Integer> targetPortToHostPortLookup = new HashMap<>();
 
-        config.getPorts()
-              .stream()
-              .forEach(port -> targetPortToHostPortLookup.put(
-                      port,
-                      Integer.parseInt(containerInfo.networkSettings()
-                                                    .ports()
-                                                    .get(port + "/tcp")
-                                                    .get(0)
-                                                    .hostPort())
-                       )
-              );
-
+        for (final Integer port : config.getPorts()) {
+            targetPortToHostPortLookup.put(
+                    port,
+                    Integer.parseInt(containerInfo.networkSettings()
+                                                  .ports()
+                                                  .get(port + "/tcp")
+                                                  .get(0)
+                                                  .hostPort())
+            );
+        }
 
         return new Container(containerInfo, targetPortToHostPortLookup, client.getHost(), client);
+    }
+
+    private String[] getPorts(final List<Integer> ports) {
+        Set<String> portsSet = new HashSet<>();
+        for (final Integer port : ports) {
+            portsSet.add(port.toString());
+        }
+
+        return portsSet.toArray(new String[]{});
     }
 
     protected void addCustomConfigs(final ContainerConfig.Builder configBuilder) {
