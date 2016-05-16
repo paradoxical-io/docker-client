@@ -135,8 +135,11 @@ public class DockerCreator {
         catch (DockerCertificateException e) {
             System.err.println(e.getMessage());
         }
+
+        final String dockerMachineUrl = config.getDockerMachineUrl() == null ? DockerClientConfig.DOCKER_MACHINE_SERVICE_URL : config.getDockerMachineUrl();
+
         return DefaultDockerClient.builder()
-                                  .uri(URI.create(config.getDockerMachineUrl()))
+                                  .uri(URI.create(dockerMachineUrl))
                                   .dockerCertificates(dockerCertificates)
                                   .build();
     }
