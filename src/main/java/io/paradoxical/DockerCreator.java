@@ -27,6 +27,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import static com.spotify.docker.client.DockerClient.AttachParameter.LOGS;
+import static com.spotify.docker.client.DockerClient.AttachParameter.STDERR;
+import static com.spotify.docker.client.DockerClient.AttachParameter.STDOUT;
+import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
 import static com.spotify.docker.client.DockerClient.LogsParam.follow;
 import static com.spotify.docker.client.DockerClient.LogsParam.stdout;
 
@@ -136,14 +140,20 @@ public class DockerCreator {
     protected void waitForLogInContainer(final ContainerCreation createdContainer, final DockerClient client, final String waitForLog)
             throws DockerException, InterruptedException {
 
-        LogStream logs = client.logs(createdContainer.id(), follow(), stdout());
-        String log;
+        String log = "";
+        LogStream logs = client.attachContainer(createdContainer.id(), LOGS, STREAM, STDOUT, STDERR);
         do {
+            if(!logs.hasNext()){
+                Thread.sleep(10);
+
+                continue;
+            }
+
             LogMessage logMessage = logs.next();
             ByteBuffer buffer = logMessage.content();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
-            log = new String(bytes);
+            log += new String(bytes);
         } while (!log.contains(waitForLog));
     }
 
