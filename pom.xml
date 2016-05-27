@@ -9,7 +9,7 @@
 
     <groupId>io.paradoxical</groupId>
     <artifactId>docker-client</artifactId>
-    <version>1.4</version>
+    <version>1.5-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>Docker client</description>
 
@@ -45,7 +45,7 @@
         <url>http://github.com:paradoxical-io/docker-client</url>
         <connection>scm:git:git@github.com:paradoxical-io/docker-client.git</connection>
         <developerConnection>scm:git:git@github.com:paradoxical-io/docker-client.git</developerConnection>
-        <tag>docker-client-1.4</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
