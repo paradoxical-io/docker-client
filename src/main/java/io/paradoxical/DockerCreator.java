@@ -18,6 +18,7 @@ import org.apache.commons.lang.StringUtils;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,8 +41,13 @@ public class DockerCreator {
 
         Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
-        for (Integer port : config.getPorts()) {
+        for (Integer port : config.getTransientPorts()) {
             portBindings.put(port.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", random.nextInt(30000) + 15000)));
+        }
+
+        for (MappedPort mappedPort : config.getMappedPorts()) {
+            portBindings.put(mappedPort.getHostPort().toString(),
+                             Collections.singletonList(PortBinding.of("0.0.0.0", mappedPort.getContainerPort().toString())));
         }
 
         HostConfig hostConfig = HostConfig.builder()
@@ -52,8 +58,9 @@ public class DockerCreator {
                 ContainerConfig.builder()
                                .hostConfig(hostConfig)
                                .image(config.getImageName())
+                               .env(getEnvVars(config.getEnvVars()))
                                .networkDisabled(false)
-                               .exposedPorts(getPorts(config.getPorts()));
+                               .exposedPorts(getPorts(config.getTransientPorts()));
 
         if (config.getArguments() != null) {
             configBuilder.cmd(Splitter.on(' ').splitToList(config.getArguments()));
@@ -65,7 +72,17 @@ public class DockerCreator {
 
         final DockerClient client = createDockerClient(config);
 
-        client.pull(configBuilder.image());
+        try {
+            if (config.isPullAlways()) {
+                client.pull(configBuilder.image());
+            }
+            else {
+                client.inspectImage(configBuilder.image());
+            }
+        }
+        catch (Exception e) {
+            client.pull(configBuilder.image());
+        }
 
         final ContainerCreation createdContainer = client.createContainer(container);
 
@@ -79,7 +96,7 @@ public class DockerCreator {
 
         Map<Integer, Integer> targetPortToHostPortLookup = new HashMap<>();
 
-        for (final Integer port : config.getPorts()) {
+        for (final Integer port : config.getTransientPorts()) {
             targetPortToHostPortLookup.put(
                     port,
                     Integer.parseInt(containerInfo.networkSettings()
@@ -91,6 +108,16 @@ public class DockerCreator {
         }
 
         return new Container(containerInfo, targetPortToHostPortLookup, client.getHost(), client);
+    }
+
+    private List<String> getEnvVars(final List<EnvironmentVar> envVars) {
+        List<String> vars = new ArrayList<>();
+
+        for (final EnvironmentVar envVar : envVars) {
+            vars.add(envVar.getEnvVarName() + "=" + envVar.getEnvVarValue());
+        }
+
+        return vars;
     }
 
     private String[] getPorts(final List<Integer> ports) {

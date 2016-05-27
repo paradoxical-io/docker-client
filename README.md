@@ -4,7 +4,7 @@ docker-client
 ![Build status](https://travis-ci.org/paradoxical-io/docker-client.svg?branch=master)
 
 A simplified docker client that wraps the spotify client with simpler options that always generates
-random ports for host proxying.  Great for testing!
+random transientPorts for host proxying.  Great for testing!
 
 To install
 

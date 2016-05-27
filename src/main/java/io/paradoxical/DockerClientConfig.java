@@ -2,7 +2,9 @@ package io.paradoxical;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Value;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -19,7 +21,13 @@ public class DockerClientConfig {
 
     private String arguments = null;
 
-    private List<Integer> ports;
+    private List<Integer> transientPorts;
+
+    private List<MappedPort> mappedPorts;
+
+    private List<EnvironmentVar> envVars;
+
+    private boolean pullAlways = false;
 
     public static DockerClientConfigBuilder builder() {return new DockerClientConfigBuilder();}
 
@@ -28,7 +36,10 @@ public class DockerClientConfig {
         private String imageName;
         private String waitForLogLine;
         private String arguments;
-        private List<Integer> ports;
+        private List<Integer> ports = new ArrayList<>();
+        private List<MappedPort> mappedPorts = new ArrayList<>();
+        private List<EnvironmentVar> envVars = new ArrayList<>();
+        private boolean pullAlways;
 
         DockerClientConfigBuilder() {}
 
@@ -57,8 +68,27 @@ public class DockerClientConfig {
             return this;
         }
 
+        public DockerClientConfig.DockerClientConfigBuilder envVars(final List<EnvironmentVar> envVars) {
+            this.envVars = envVars;
+            return this;
+        }
+
+        public DockerClientConfig.DockerClientConfigBuilder mappedPorts(final List<MappedPort> mappedPorts) {
+            this.mappedPorts = mappedPorts;
+            return this;
+        }
+
         public DockerClientConfig.DockerClientConfigBuilder port(final Integer port) {
             return ports(Arrays.asList(port));
+        }
+
+        public DockerClientConfig.DockerClientConfigBuilder mappedPort(final MappedPort port) {
+            return mappedPorts(Arrays.asList(port));
+        }
+
+        public DockerClientConfig.DockerClientConfigBuilder pullAlways(final boolean pullAlways) {
+            this.pullAlways = pullAlways;
+            return this;
         }
 
         public DockerClientConfig build() {
@@ -66,7 +96,10 @@ public class DockerClientConfig {
                                           imageName,
                                           waitForLogLine,
                                           arguments,
-                                          ports);
+                                          ports,
+                                          mappedPorts,
+                                          envVars,
+                                          pullAlways);
         }
     }
 }
