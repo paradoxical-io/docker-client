@@ -29,6 +29,8 @@ public class DockerClientConfig {
 
     private boolean pullAlways = false;
 
+    private String containerName = null;
+
     public static DockerClientConfigBuilder builder() {return new DockerClientConfigBuilder();}
 
     public static class DockerClientConfigBuilder {
@@ -40,6 +42,7 @@ public class DockerClientConfig {
         private List<MappedPort> mappedPorts = new ArrayList<>();
         private List<EnvironmentVar> envVars = new ArrayList<>();
         private boolean pullAlways;
+        private String containerName;
 
         DockerClientConfigBuilder() {}
 
@@ -91,6 +94,11 @@ public class DockerClientConfig {
             return this;
         }
 
+        public DockerClientConfig.DockerClientConfigBuilder containerName(final String containerName) {
+            this.containerName = containerName;
+            return this;
+        }
+
         public DockerClientConfig build() {
             return new DockerClientConfig(dockerMachineUrl == null ? DOCKER_MACHINE_SERVICE_URL : dockerMachineUrl,
                                           imageName,
@@ -99,7 +107,8 @@ public class DockerClientConfig {
                                           ports,
                                           mappedPorts,
                                           envVars,
-                                          pullAlways);
+                                          pullAlways,
+                                          containerName);
         }
     }
 }

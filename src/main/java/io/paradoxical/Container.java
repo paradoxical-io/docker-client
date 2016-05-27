@@ -23,6 +23,8 @@ public class Container implements AutoCloseable {
     public void close() {
         try {
             client.stopContainer(containerInfo.id(), 10);
+
+            client.removeContainer(containerInfo.id());
         }
         catch (DockerException | InterruptedException e) {
             logger.error("Error stopping container", e);

@@ -88,7 +88,7 @@ public class DockerCreator {
             client.pull(configBuilder.image());
         }
 
-        final ContainerCreation createdContainer = client.createContainer(container);
+        final ContainerCreation createdContainer = client.createContainer(container, config.getContainerName());
 
         client.startContainer(createdContainer.id());
 
