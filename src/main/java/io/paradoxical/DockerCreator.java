@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.spotify.docker.client.DockerClient.AttachParameter.LOGS;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STDERR;
@@ -93,7 +95,7 @@ public class DockerCreator {
         client.startContainer(createdContainer.id());
 
         if (!StringUtils.isEmpty(config.getWaitForLogLine())) {
-            waitForLogInContainer(createdContainer, client, config.getWaitForLogLine());
+            waitForLogInContainer(createdContainer, client, config);
         }
 
         final ContainerInfo containerInfo = client.inspectContainer(createdContainer.id());
@@ -137,13 +139,22 @@ public class DockerCreator {
         // extension point
     }
 
-    protected void waitForLogInContainer(final ContainerCreation createdContainer, final DockerClient client, final String waitForLog)
+    protected void waitForLogInContainer(
+            final ContainerCreation createdContainer,
+            final DockerClient client,
+            final DockerClientConfig config)
             throws DockerException, InterruptedException {
+
+        final long start = System.currentTimeMillis();
 
         String log = "";
         LogStream logs = client.attachContainer(createdContainer.id(), LOGS, STREAM, STDOUT, STDERR);
         do {
-            if(!logs.hasNext()){
+            if ((System.currentTimeMillis() - start) / 1000 > config.getMaxWaitLogSeconds()) {
+                return;
+            }
+
+            if (!logs.hasNext()) {
                 Thread.sleep(10);
 
                 continue;
@@ -154,7 +165,18 @@ public class DockerCreator {
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
             log += new String(bytes);
-        } while (!log.contains(waitForLog));
+        } while (!matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
+    }
+
+    private boolean matches(final String log, final String waitForLog, final LogLineMatchFormat matchFormat) {
+        switch (matchFormat) {
+            case Exact:
+                return log.contains(waitForLog);
+            case Regex:
+                return Pattern.compile(waitForLog).matcher(log).find();
+        }
+
+        return false;
     }
 
     protected DockerClient createDockerClient(DockerClientConfig config) {

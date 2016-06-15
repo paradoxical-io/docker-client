@@ -31,6 +31,10 @@ public class DockerClientConfig {
 
     private String containerName = null;
 
+    private LogLineMatchFormat matchFormat;
+
+    private Integer maxWaitLogSeconds = 60;
+
     public static DockerClientConfigBuilder builder() {return new DockerClientConfigBuilder();}
 
     public static class DockerClientConfigBuilder {
@@ -43,6 +47,8 @@ public class DockerClientConfig {
         private List<EnvironmentVar> envVars = new ArrayList<>();
         private boolean pullAlways;
         private String containerName;
+        private LogLineMatchFormat matchFormat = LogLineMatchFormat.Exact;
+        private Integer maxWaitLogSeconds = 60;
 
         DockerClientConfigBuilder() {}
 
@@ -61,9 +67,19 @@ public class DockerClientConfig {
             return this;
         }
 
-        public DockerClientConfig.DockerClientConfigBuilder waitForLogLine(final String waitForLogLine) {
+        public DockerClientConfig.DockerClientConfigBuilder waitForLogLine(final String waitForLogLine, final LogLineMatchFormat matchFormat, final Integer maxWaitLogSeconds) {
             this.waitForLogLine = waitForLogLine;
+            this.matchFormat = matchFormat;
+            this.maxWaitLogSeconds = maxWaitLogSeconds;
             return this;
+        }
+
+        public DockerClientConfig.DockerClientConfigBuilder waitForLogLine(final String waitForLogLine, final LogLineMatchFormat matchFormat) {
+            return waitForLogLine(waitForLogLine, matchFormat, 60);
+        }
+
+        public DockerClientConfig.DockerClientConfigBuilder waitForLogLine(final String waitForLogLine) {
+            return waitForLogLine(waitForLogLine, LogLineMatchFormat.Exact, 60);
         }
 
         public DockerClientConfig.DockerClientConfigBuilder ports(final List<Integer> ports) {
@@ -108,7 +124,9 @@ public class DockerClientConfig {
                                           mappedPorts,
                                           envVars,
                                           pullAlways,
-                                          containerName);
+                                          containerName,
+                                          matchFormat,
+                                          maxWaitLogSeconds);
         }
     }
 }

@@ -30,6 +30,21 @@ public class DockerTests {
     }
 
     @Test
+    public void regex_works() throws InterruptedException, DockerException, DockerCertificateException, IOException {
+        final DockerClientConfig config =
+                DockerClientConfig.builder()
+                                  .imageName("vsouza/sqs-local")
+                                  .port(5672)
+                                  .pullAlways(true)
+                                  .waitForLogLine("ElasticMQ server \\(.+\\) started", LogLineMatchFormat.Regex)
+                                  .build();
+
+        try (final Container client = DockerCreator.build(config)) {
+
+        }
+    }
+
+    @Test
     public void docker_arguments_pass() throws InterruptedException, DockerException, DockerCertificateException {
         try (final Container client = DockerCreator.build(
                 DockerClientConfig.builder()
