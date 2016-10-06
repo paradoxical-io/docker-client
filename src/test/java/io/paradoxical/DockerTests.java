@@ -1,13 +1,14 @@
 package io.paradoxical;
 
 import com.rabbitmq.client.ConnectionFactory;
-import com.spotify.docker.client.DockerCertificateException;
-import com.spotify.docker.client.DockerException;
+import com.spotify.docker.client.exceptions.DockerCertificateException;
+import com.spotify.docker.client.exceptions.DockerException;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,6 +28,26 @@ public class DockerTests {
             factory.setPort(client.getTargetPortToHostPortLookup().get(5672));
             factory.newConnection();
         }
+    }
+
+    @Test
+    public void test_elasticsearch() throws InterruptedException, DockerCertificateException, DockerException {
+        final Container one = DockerCreator.build(DockerClientConfig.builder()
+                                                                    .imageName("elasticsearch:1.5.2")
+                                                                    .waitForLogLine("started")
+                                                                    .port(9200)
+                                                                    .build());
+
+        final Container two = DockerCreator.build(DockerClientConfig.builder()
+                                                                        .imageName("elasticsearch:1.5.2")
+                                                                        .waitForLogLine("started")
+                                                                        .port(9200)
+                                                                        .build());
+
+        Thread.sleep(10000);
+
+        one.close();
+        two.close();
     }
 
     @Test
@@ -56,6 +77,43 @@ public class DockerTests {
         )) {
             assertThat(portIsOpen(client.getDockerHost(), client.getTargetPortToHostPortLookup().get(8080))).isTrue();
         }
+    }
+
+    @Test
+    public void can_list_prefixed_containers() throws InterruptedException, DockerException, DockerCertificateException {
+        for (final ExistingContainer dynamo : DockerCreator.findContainers("dynamo")) {
+            dynamo.close();
+        }
+
+        final Container dynamo1 = DockerCreator.build(
+                DockerClientConfig.builder()
+                                  .imageName("vsouza/dynamo-local")
+                                  .containerName("dynamo1")
+                                  .port(8080)
+                                  .waitForLogLine("Listening at")
+                                  .arguments("--port 8080 --createTableMs 5 --deleteTableMs 5 --updateTableMs 5")
+                                  .build());
+
+        final Container dynamo2 = DockerCreator.build(
+                DockerClientConfig.builder()
+                                  .imageName("vsouza/dynamo-local")
+                                  .containerName("dynamo2")
+                                  .port(8080)
+                                  .waitForLogLine("Listening at")
+                                  .arguments("--port 8080 --createTableMs 5 --deleteTableMs 5 --updateTableMs 5")
+                                  .build());
+
+        final List<ExistingContainer> dynamo = DockerCreator.findContainers(dynamo1.getClient(), "dynamo");
+
+        assertThat(dynamo.size()).isEqualTo(2);
+
+        for (final ExistingContainer container : dynamo) {
+            container.close();
+        }
+
+        final List<ExistingContainer> dynamoAfter = DockerCreator.findContainers(dynamo1.getClient(), "dynamo");
+
+        assertThat(dynamoAfter.size()).isEqualTo(0);
     }
 
     public boolean portIsOpen(String ip, int port) {

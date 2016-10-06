@@ -2,12 +2,12 @@ package io.paradoxical;
 
 import com.google.common.base.Splitter;
 import com.spotify.docker.client.DefaultDockerClient;
-import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerCertificates;
 import com.spotify.docker.client.DockerClient;
-import com.spotify.docker.client.DockerException;
 import com.spotify.docker.client.LogMessage;
 import com.spotify.docker.client.LogStream;
+import com.spotify.docker.client.exceptions.DockerCertificateException;
+import com.spotify.docker.client.exceptions.DockerException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.ContainerInfo;
@@ -26,24 +26,56 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.spotify.docker.client.DockerClient.AttachParameter.LOGS;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STDERR;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STDOUT;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
-import static com.spotify.docker.client.DockerClient.LogsParam.follow;
-import static com.spotify.docker.client.DockerClient.LogsParam.stdout;
 
 public class DockerCreator {
     private static final Random random = new Random();
 
-    public static Container build(DockerClientConfig config) throws InterruptedException, DockerException, DockerCertificateException {
+    public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
         return new DockerCreator().create(config);
     }
 
-    public Container create(DockerClientConfig config) throws DockerCertificateException, DockerException, InterruptedException {
+    public static List<ExistingContainer> findContainers(String prefixedWith) throws InterruptedException, DockerException {
+        final DockerClient dockerClient = defaultClient();
+
+        return findContainers(dockerClient, prefixedWith);
+    }
+
+    public static List<ExistingContainer> findContainers(DockerClient dockerClient, String prefixedWith) throws InterruptedException, DockerException {
+        final List<com.spotify.docker.client.messages.Container> allContainers =
+                dockerClient.listContainers(DockerClient.ListContainersParam.allContainers(true));
+
+        final List<ExistingContainer> foundContainers = new ArrayList<>();
+
+        for (final com.spotify.docker.client.messages.Container container : allContainers) {
+            if (containerStartsWith(container, prefixedWith)) {
+                final ContainerInfo containerInfo = dockerClient.inspectContainer(container.id());
+
+                final ExistingContainer containerMeta = new ExistingContainer(containerInfo, dockerClient);
+
+                foundContainers.add(containerMeta);
+            }
+        }
+
+        return foundContainers;
+    }
+
+    private static boolean containerStartsWith(final com.spotify.docker.client.messages.Container container, final String prefixedWith) {
+        for (final String s : container.names()) {
+            if (s.substring(1,s.length()).startsWith(prefixedWith)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public Container create(DockerClientConfig config) throws DockerException, InterruptedException {
 
         Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
@@ -58,6 +90,7 @@ public class DockerCreator {
 
         HostConfig hostConfig = HostConfig.builder()
                                           .portBindings(portBindings)
+                                          .lxcConf(new HostConfig.LxcConfParameter("icc", "false"))
                                           .build();
 
         ContainerConfig.Builder configBuilder =
@@ -65,7 +98,6 @@ public class DockerCreator {
                                .hostConfig(hostConfig)
                                .image(config.getImageName())
                                .env(getEnvVars(config.getEnvVars()))
-                               .networkDisabled(false)
                                .exposedPorts(getPorts(config.getTransientPorts()));
 
         if (config.getArguments() != null) {
@@ -166,6 +198,7 @@ public class DockerCreator {
             buffer.get(bytes);
             log += new String(bytes);
         } while (!matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
+
     }
 
     private boolean matches(final String log, final String waitForLog, final LogLineMatchFormat matchFormat) {
@@ -179,7 +212,11 @@ public class DockerCreator {
         return false;
     }
 
-    protected DockerClient createDockerClient(DockerClientConfig config) {
+    public static DockerClient defaultClient() {
+        return createDockerClient(DockerClientConfig.builder().build());
+    }
+
+    protected static DockerClient createDockerClient(DockerClientConfig config) {
         if (isUnix() || System.getenv("DOCKER_HOST") != null) {
             try {
                 return DefaultDockerClient.fromEnv().build();
@@ -198,7 +235,10 @@ public class DockerCreator {
             System.err.println(e.getMessage());
         }
 
-        final String dockerMachineUrl = config.getDockerMachineUrl() == null ? DockerClientConfig.DOCKER_MACHINE_SERVICE_URL : config.getDockerMachineUrl();
+        final String dockerMachineUrl =
+                config.getDockerMachineUrl() == null ?
+                DockerClientConfig.DOCKER_MACHINE_SERVICE_URL :
+                config.getDockerMachineUrl();
 
         return DefaultDockerClient.builder()
                                   .uri(URI.create(dockerMachineUrl))
@@ -206,7 +246,7 @@ public class DockerCreator {
                                   .build();
     }
 
-    protected boolean isUnix() {
+    protected static boolean isUnix() {
         String os = System.getProperty("os.name").toLowerCase();
         return os.contains("nix") || os.contains("nux") || os.contains("aix");
     }
