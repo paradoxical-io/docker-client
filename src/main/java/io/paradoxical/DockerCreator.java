@@ -15,6 +15,7 @@ import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.PortBinding;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.File;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
@@ -35,6 +36,7 @@ import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
 
 public class DockerCreator {
     private static final Random random = new Random();
+    private static boolean dockerNative;
 
     public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
         return new DockerCreator().create(config);
@@ -217,7 +219,7 @@ public class DockerCreator {
     }
 
     protected static DockerClient createDockerClient(DockerClientConfig config) {
-        if (isUnix() || System.getenv("DOCKER_HOST") != null) {
+        if (isUnix() || isDockerNative() || System.getenv("DOCKER_HOST") != null) {
             try {
                 return DefaultDockerClient.fromEnv().build();
             }
@@ -244,6 +246,10 @@ public class DockerCreator {
                                   .uri(URI.create(dockerMachineUrl))
                                   .dockerCertificates(dockerCertificates)
                                   .build();
+    }
+
+    public static boolean isDockerNative() {
+        return new File("/var/run/docker.sock").exists();
     }
 
     protected static boolean isUnix() {
