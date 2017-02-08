@@ -30,7 +30,7 @@
         <junit.version>4.12</junit.version>
         <java.version>1.7</java.version>
         <assertj.version>2.4.0</assertj.version>
-        <spotify.docker.client>6.0.0</spotify.docker.client>
+        <spotify.docker.client>6.1.0</spotify.docker.client>
 
         <godaddy.logging.version>1.2.1</godaddy.logging.version>
 

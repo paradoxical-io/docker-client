@@ -14,6 +14,8 @@ import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.PortBinding;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -27,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static com.spotify.docker.client.DockerClient.AttachParameter.LOGS;
@@ -35,6 +39,8 @@ import static com.spotify.docker.client.DockerClient.AttachParameter.STDOUT;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
 
 public class DockerCreator {
+    private static final Logger logger = LoggerFactory.getLogger(DockerCreator.class);
+
     private static final Random random = new Random();
     private static boolean dockerNative;
 
@@ -69,7 +75,7 @@ public class DockerCreator {
 
     private static boolean containerStartsWith(final com.spotify.docker.client.messages.Container container, final String prefixedWith) {
         for (final String s : container.names()) {
-            if (s.substring(1,s.length()).startsWith(prefixedWith)) {
+            if (s.substring(1, s.length()).startsWith(prefixedWith)) {
                 return true;
             }
         }
@@ -179,28 +185,60 @@ public class DockerCreator {
             final DockerClientConfig config)
             throws DockerException, InterruptedException {
 
-        final long start = System.currentTimeMillis();
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
 
-        String log = "";
-        LogStream logs = client.attachContainer(createdContainer.id(), LOGS, STREAM, STDOUT, STDERR);
-        do {
-            if ((System.currentTimeMillis() - start) / 1000 > config.getMaxWaitLogSeconds()) {
-                return;
-            }
+        // wrap waiting for the log in a dedicated thread, since the docker client
+        // sometimes misses log lines and waits forever
+        Thread threadHack =
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        final long start = System.currentTimeMillis();
 
-            if (!logs.hasNext()) {
-                Thread.sleep(10);
+                        String log = "";
+                        LogStream logs = null;
+                        try {
+                            logs = client.attachContainer(createdContainer.id(), LOGS, STREAM, STDOUT, STDERR);
+                        }
+                        catch (DockerException | InterruptedException e) {
+                            e.printStackTrace();
 
-                continue;
-            }
+                            return;
+                        }
+                        do {
+                            if ((System.currentTimeMillis() - start) / 1000 > config.getMaxWaitLogSeconds()) {
+                                return;
+                            }
 
-            LogMessage logMessage = logs.next();
-            ByteBuffer buffer = logMessage.content();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            log += new String(bytes);
-        } while (!matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
+                            if (!logs.hasNext()) {
+                                try {
+                                    Thread.sleep(10);
+                                }
+                                catch (InterruptedException e) {
 
+                                }
+
+                                continue;
+                            }
+
+                            LogMessage logMessage = logs.next();
+                            ByteBuffer buffer = logMessage.content();
+                            byte[] bytes = new byte[buffer.remaining()];
+                            buffer.get(bytes);
+                            log += new String(bytes);
+                        } while (!matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
+
+                        countDownLatch.countDown();
+                    }
+                });
+
+        threadHack.setDaemon(true);
+
+        threadHack.start();
+
+        if (!countDownLatch.await(config.getMaxWaitLogSeconds(), TimeUnit.SECONDS)) {
+            logger.warn("Log line never appeared in a timeline manner, attempting to continue");
+        }
     }
 
     private boolean matches(final String log, final String waitForLog, final LogLineMatchFormat matchFormat) {

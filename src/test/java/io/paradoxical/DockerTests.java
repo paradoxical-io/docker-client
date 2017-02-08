@@ -39,10 +39,10 @@ public class DockerTests {
                                                                     .build());
 
         final Container two = DockerCreator.build(DockerClientConfig.builder()
-                                                                        .imageName("elasticsearch:1.5.2")
-                                                                        .waitForLogLine("started")
-                                                                        .port(9200)
-                                                                        .build());
+                                                                    .imageName("elasticsearch:1.5.2")
+                                                                    .waitForLogLine("started")
+                                                                    .port(9200)
+                                                                    .build());
 
         Thread.sleep(10000);
 
@@ -76,6 +76,21 @@ public class DockerTests {
                                   .build()
         )) {
             assertThat(portIsOpen(client.getDockerHost(), client.getTargetPortToHostPortLookup().get(8080))).isTrue();
+        }
+    }
+
+    @Test
+    public void docker_redis() throws InterruptedException, DockerException, DockerCertificateException, IOException {
+
+        final DockerClientConfig config =
+                DockerClientConfig.builder()
+                                  .imageName("redis:2.8.23")
+                                  .waitForLogLine("The server is now ready to accept connections on port 6379", LogLineMatchFormat.Exact, 5)
+                                  .port(6379)
+                                  .build();
+
+        try (final Container client = DockerCreator.build(config)) {
+            System.out.println(client);
         }
     }
 
