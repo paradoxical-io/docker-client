@@ -98,7 +98,17 @@ public class DockerCreator {
 
         HostConfig hostConfig = HostConfig.builder()
                                           .portBindings(portBindings)
-                                          .lxcConf(new HostConfig.LxcConfParameter("icc", "false"))
+                                          .lxcConf(new HostConfig.LxcConfParameter() {
+                                              @Override
+                                              public String key() {
+                                                  return "icc";
+                                              }
+
+                                              @Override
+                                              public String value() {
+                                                  return "false";
+                                              }
+                                          })
                                           .build();
 
         ContainerConfig.Builder configBuilder =
@@ -120,14 +130,14 @@ public class DockerCreator {
 
         try {
             if (config.isPullAlways()) {
-                client.pull(configBuilder.image());
+                client.pull(container.image());
             }
             else {
-                client.inspectImage(configBuilder.image());
+                client.inspectImage(container.image());
             }
         }
         catch (Exception e) {
-            client.pull(configBuilder.image());
+            client.pull(container.image());
         }
 
         final ContainerCreation createdContainer = client.createContainer(container, config.getContainerName());
