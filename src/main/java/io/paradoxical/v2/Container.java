@@ -5,6 +5,7 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.LogContainerCmd;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
+import com.github.dockerjava.core.command.WaitContainerResultCallback;
 import io.paradoxical.LogMatcher;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
+import java.util.concurrent.TimeUnit;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -29,9 +31,7 @@ public class Container implements AutoCloseable {
 
     private Boolean isClosed = false;
 
-    public String readLogsFully() {
-        final CountDownLatch countDownLatch = new CountDownLatch(1);
-
+    public String readLogsFully(Integer waitTimeSeconds) throws InterruptedException {
         final LogContainerCmd logContainerCmd =
                 client.logContainerCmd(containerInfo.getId())
                       .withStdOut(true)
@@ -40,19 +40,26 @@ public class Container implements AutoCloseable {
 
         final StringBuilder stringBuilder = new StringBuilder();
 
-        logContainerCmd.exec(new LogContainerResultCallback() {
+        final LogContainerResultCallback resultCallback = new LogContainerResultCallback() {
             @Override
             public void onNext(final Frame item) {
                 stringBuilder.append(item.toString());
             }
+        };
 
-            @Override
-            public void onComplete() {
-                countDownLatch.countDown();
-            }
-        });
+        logContainerCmd.exec(resultCallback);
+
+        resultCallback.awaitCompletion(waitTimeSeconds, TimeUnit.SECONDS);
 
         return stringBuilder.toString();
+    }
+
+    public WaitContainerResultCallback waitForCompletion() {
+        final WaitContainerResultCallback waitContainerResultCallback = new WaitContainerResultCallback();
+
+        client.waitContainerCmd(getContainerInfo().getId()).exec(waitContainerResultCallback);
+
+        return waitContainerResultCallback;
     }
 
     @Override

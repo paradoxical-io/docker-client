@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,6 +27,26 @@ public class DockerV2Tests {
             factory.setPort(client.getTargetPortToHostPortLookup().get(5672));
             factory.newConnection();
         }
+    }
+
+    @Test
+    public void get_logs() throws Exception {
+        final DockerClientConfig config =
+                DockerClientConfig.builder()
+                                  .imageName("java:8")
+                                  .port(5672)
+                                  .arguments("echo foo")
+                                  .build();
+
+        final Container client = DockerCreator.build(config);
+
+        client.waitForCompletion().awaitCompletion(10, TimeUnit.SECONDS);
+
+        String logs = client.readLogsFully(30);
+
+        assert(logs.contains("foo"));
+
+        client.close();
     }
 
     @Test
