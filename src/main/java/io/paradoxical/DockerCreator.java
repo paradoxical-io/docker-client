@@ -38,6 +38,10 @@ import static com.spotify.docker.client.DockerClient.AttachParameter.STDERR;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STDOUT;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
 
+/**
+ * Please use the v2 namespace
+ */
+@Deprecated()
 public class DockerCreator {
     private static final Logger logger = LoggerFactory.getLogger(DockerCreator.class);
 

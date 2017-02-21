@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Exchanger;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -57,14 +58,19 @@ public class Container implements AutoCloseable {
     @Override
     public void close() {
         try {
-            client.stopContainerCmd(containerInfo.getId()).exec();
+            try {
+                client.stopContainerCmd(containerInfo.getId()).withTimeout(30).exec();
+            }
+            catch (Exception ex) {
+                logger.warn("Error stopping container", ex);
+            }
 
             client.removeContainerCmd(containerInfo.getId()).exec();
 
             client.close();
         }
-        catch (IOException e) {
-            logger.error("Error stopping container", e);
+        catch (Exception e) {
+            logger.warn("Error closing container", e);
         }
 
         isClosed = true;
