@@ -57,9 +57,9 @@ public class Container implements AutoCloseable {
     @Override
     public void close() {
         try {
-            client.stopContainerCmd(containerInfo.getId());
+            client.stopContainerCmd(containerInfo.getId()).exec();
 
-            client.removeContainerCmd(containerInfo.getId());
+            client.removeContainerCmd(containerInfo.getId()).exec();
 
             client.close();
         }

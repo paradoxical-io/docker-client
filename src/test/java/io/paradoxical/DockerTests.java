@@ -44,7 +44,7 @@ public class DockerTests {
                                                                     .port(9200)
                                                                     .build());
 
-        Thread.sleep(10000);
+        Thread.sleep(500);
 
         one.close();
         two.close();
