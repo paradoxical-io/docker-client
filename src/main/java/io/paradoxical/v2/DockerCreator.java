@@ -16,14 +16,20 @@ import io.paradoxical.DockerClientConfig;
 import io.paradoxical.EnvironmentVar;
 import io.paradoxical.LogMatcher;
 import io.paradoxical.MappedPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class DockerCreator {
+    private static final Logger logger = LoggerFactory.getLogger(io.paradoxical.DockerCreator.class);
+
     private static Random random = new Random();
 
     public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
@@ -60,11 +66,24 @@ public class DockerCreator {
 
         client.startContainerCmd(containerResponse.getId()).exec();
 
+        logger.info("Starting container id " + containerResponse.getId() + ", " + config.getImageName());
+
         if (config.getWaitForLogLine() != null) {
             waitForContainer(containerResponse, client, config);
         }
 
-        return new Container(containerResponse, getMappedPorts(ports), dockerClientConfig.getDockerHost().getHost(), client);
+        logger.info("Container id " + containerResponse.getId() + " ready");
+
+        return new Container(containerResponse, getMappedPorts(ports), getHost(dockerClientConfig.getDockerHost()), client);
+    }
+
+    private static String getHost(final URI dockerHost) {
+        if (Objects.equals(dockerHost.getScheme(), "unix")) {
+            return "localhost";
+        }
+        else {
+            return dockerHost.getHost();
+        }
     }
 
     private static void waitForContainer(
@@ -72,50 +91,30 @@ public class DockerCreator {
             final DockerClient client,
             final DockerClientConfig config
     ) throws InterruptedException {
-        final StringBuilder stringBuilder = new StringBuilder();
-
         final CountDownLatch countDownLatch = new CountDownLatch(1);
-
-        final long[] since = { 0 };
 
         final LogContainerCmd logContainerCmd =
                 client.logContainerCmd(containerResponse.getId())
                       .withStdOut(true)
+                      .withFollowStream(true)
                       .withStdErr(true);
 
-        long start = System.currentTimeMillis();
-
-        final Boolean[] found = { false };
-
-        while (true) {
-            if ((System.currentTimeMillis() - start) / 1000 > config.getMaxWaitLogSeconds()) {
-                break;
+        logContainerCmd.exec(new LogContainerResultCallback() {
+            @Override
+            public void onNext(final Frame item) {
+                if (LogMatcher.matches(item.toString(), config.getWaitForLogLine(), config.getMatchFormat())) {
+                    countDownLatch.countDown();
+                }
             }
 
-            logContainerCmd.withSince((int) since[0])
-                           .exec(new LogContainerResultCallback() {
-                               @Override
-                               public void onNext(final Frame item) {
-                                   if (LogMatcher.matches(item.toString(), config.getWaitForLogLine(), config.getMatchFormat())) {
-                                       found[0] = true;
-                                   }
-
-                                   super.onNext(item);
-                               }
-
-                               @Override
-                               public void onComplete() {
-                                   countDownLatch.countDown();
-                               }
-                           });
-
-            countDownLatch.await();
-
-            if (found[0]) {
-                return;
+            @Override
+            public void onComplete() {
+                countDownLatch.countDown();
             }
+        });
 
-            Thread.sleep(500);
+        if (!countDownLatch.await(config.getMaxWaitLogSeconds(), TimeUnit.SECONDS)) {
+            logger.warn("Didn't find log line in a timely fashion, continuing");
         }
     }
 
