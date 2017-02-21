@@ -11,6 +11,7 @@ import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
+import com.github.dockerjava.core.command.PullImageResultCallback;
 import com.spotify.docker.client.exceptions.DockerException;
 import io.paradoxical.DockerClientConfig;
 import io.paradoxical.EnvironmentVar;
@@ -60,6 +61,14 @@ public class DockerCreator {
 
         if (config.getContainerName() != null) {
             createContainerCmd.withName(config.getContainerName());
+        }
+
+        if(config.isPullAlways()) {
+            final PullImageResultCallback pullImageResultCallback = new PullImageResultCallback();
+
+            client.pullImageCmd(config.getImageName()).exec(pullImageResultCallback);
+
+            pullImageResultCallback.awaitSuccess();
         }
 
         final CreateContainerResponse containerResponse = createContainerCmd.exec();
