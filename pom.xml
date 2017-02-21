@@ -9,7 +9,7 @@
 
     <groupId>io.paradoxical</groupId>
     <artifactId>docker-client</artifactId>
-    <version>1.12-SNAPSHOT</version>
+    <version>1.11-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>Docker client</description>
 
