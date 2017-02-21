@@ -167,13 +167,7 @@ public class DockerCreator {
     }
 
     private List<String> getEnvVars(final List<EnvironmentVar> envVars) {
-        List<String> vars = new ArrayList<>();
-
-        for (final EnvironmentVar envVar : envVars) {
-            vars.add(envVar.getEnvVarName() + "=" + envVar.getEnvVarValue());
-        }
-
-        return vars;
+        return EnvironmentVar.asEnvVars(envVars);
     }
 
     private String[] getPorts(final List<Integer> ports) {
@@ -236,7 +230,7 @@ public class DockerCreator {
                             byte[] bytes = new byte[buffer.remaining()];
                             buffer.get(bytes);
                             log += new String(bytes);
-                        } while (!matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
+                        } while (!LogMatcher.matches(log, config.getWaitForLogLine(), config.getMatchFormat()));
 
                         countDownLatch.countDown();
                     }
@@ -251,23 +245,12 @@ public class DockerCreator {
         }
     }
 
-    private boolean matches(final String log, final String waitForLog, final LogLineMatchFormat matchFormat) {
-        switch (matchFormat) {
-            case Exact:
-                return log.contains(waitForLog);
-            case Regex:
-                return Pattern.compile(waitForLog).matcher(log).find();
-        }
-
-        return false;
-    }
-
     public static DockerClient defaultClient() {
         return createDockerClient(DockerClientConfig.builder().build());
     }
 
     protected static DockerClient createDockerClient(DockerClientConfig config) {
-        if (isUnix() || isDockerNative() || System.getenv("DOCKER_HOST") != null) {
+        if (Env.isUnix() || Env.isDockerNative() || System.getenv("DOCKER_HOST") != null) {
             try {
                 return DefaultDockerClient.fromEnv().build();
             }
@@ -294,14 +277,5 @@ public class DockerCreator {
                                   .uri(URI.create(dockerMachineUrl))
                                   .dockerCertificates(dockerCertificates)
                                   .build();
-    }
-
-    public static boolean isDockerNative() {
-        return new File("/var/run/docker.sock").exists();
-    }
-
-    protected static boolean isUnix() {
-        String os = System.getProperty("os.name").toLowerCase();
-        return os.contains("nix") || os.contains("nux") || os.contains("aix");
     }
 }
