@@ -6,15 +6,11 @@ import com.github.dockerjava.api.command.LogContainerCmd;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
 import com.github.dockerjava.core.command.WaitContainerResultCallback;
-import io.paradoxical.LogMatcher;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 
-import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -69,7 +65,7 @@ public class Container implements AutoCloseable {
                 client.stopContainerCmd(containerInfo.getId()).withTimeout(30).exec();
             }
             catch (Exception ex) {
-                logger.warn("Error stopping container", ex);
+                // no-op
             }
 
             client.removeContainerCmd(containerInfo.getId()).exec();
@@ -77,7 +73,7 @@ public class Container implements AutoCloseable {
             client.close();
         }
         catch (Exception e) {
-            logger.warn("Error closing container", e);
+            // no-op
         }
 
         isClosed = true;
