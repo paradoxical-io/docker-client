@@ -4,6 +4,8 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.LogContainerCmd;
+import com.github.dockerjava.api.command.PullImageCmd;
+import com.github.dockerjava.api.model.AuthConfig;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.LxcConf;
@@ -33,7 +35,11 @@ public class DockerCreator {
 
     private static Random random = new Random();
 
-    public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
+    public static Container build(DockerClientConfig config) throws DockerException, InterruptedException {
+        return build(config, null);
+    }
+
+    public static Container build(DockerClientConfig config, AuthConfig authConfig) throws InterruptedException, DockerException {
 
         final Ports ports = new Ports();
 
@@ -63,10 +69,16 @@ public class DockerCreator {
             createContainerCmd.withName(config.getContainerName());
         }
 
-        if(config.isPullAlways()) {
+        if (config.isPullAlways()) {
             final PullImageResultCallback pullImageResultCallback = new PullImageResultCallback();
 
-            client.pullImageCmd(config.getImageName()).exec(pullImageResultCallback);
+            final PullImageCmd pullImageCmd = client.pullImageCmd(config.getImageName());
+
+            if (authConfig != null) {
+                pullImageCmd.withAuthConfig(authConfig);
+            }
+
+            pullImageCmd.exec(pullImageResultCallback);
 
             pullImageResultCallback.awaitSuccess();
         }
