@@ -44,7 +44,7 @@ public class DockerV2Tests {
 
         String logs = client.readLogsFully(30);
 
-        assert(logs.contains("foo"));
+        assert (logs.contains("foo"));
 
         client.close();
     }

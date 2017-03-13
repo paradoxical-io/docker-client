@@ -10,6 +10,7 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.LxcConf;
 import com.github.dockerjava.api.model.Ports;
+import com.github.dockerjava.core.AuthConfigFile;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
@@ -77,6 +78,9 @@ public class DockerCreator {
             if (authConfig != null) {
                 pullImageCmd.withAuthConfig(authConfig);
             }
+            else {
+                setAuthFromFile(pullImageCmd, dockerClientConfig, config.getImageName());
+            }
 
             pullImageCmd.exec(pullImageResultCallback);
 
@@ -96,6 +100,14 @@ public class DockerCreator {
         logger.info("Container id " + containerResponse.getId() + " ready");
 
         return new Container(containerResponse, getMappedPorts(ports), getHost(dockerClientConfig.getDockerHost()), client);
+    }
+
+    private static void setAuthFromFile(final PullImageCmd pullImageCmd, final DefaultDockerClientConfig dockerClientConfig, final String imageName) {
+        final AuthConfig authConfig = dockerClientConfig.effectiveAuthConfig(imageName);
+
+        if (authConfig != null) {
+            pullImageCmd.withAuthConfig(authConfig);
+        }
     }
 
     private static String getHost(final URI dockerHost) {

@@ -13,11 +13,13 @@ import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.PortBinding;
+import com.spotify.docker.client.messages.RegistryAuth;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
@@ -256,7 +258,7 @@ public class DockerCreator {
     protected static DockerClient createDockerClient(DockerClientConfig config) {
         if (Env.isUnix() || Env.isDockerNative() || System.getenv("DOCKER_HOST") != null) {
             try {
-                return DefaultDockerClient.fromEnv().build();
+                return DefaultDockerClient.fromEnv().registryAuth(getRegistryAuth(config)).build();
             }
             catch (DockerCertificateException e) {
                 System.err.println(e.getMessage());
@@ -278,8 +280,29 @@ public class DockerCreator {
                 config.getDockerMachineUrl();
 
         return DefaultDockerClient.builder()
+                                  .registryAuth(getRegistryAuth(config))
                                   .uri(URI.create(dockerMachineUrl))
                                   .dockerCertificates(dockerCertificates)
                                   .build();
+    }
+
+    private static RegistryAuth getRegistryAuth(final DockerClientConfig config) {
+        try {
+            final String[] segments = config.getImageName().split("\\/");
+
+            if (segments.length > 0) {
+                try {
+                    return RegistryAuth.fromDockerConfig(segments[0]).build();
+                }
+                catch (IOException e) {
+                    return null;
+                }
+            }
+        }
+        catch (Exception ex) {
+            return null;
+        }
+
+        return null;
     }
 }
