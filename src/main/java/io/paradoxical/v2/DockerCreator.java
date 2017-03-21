@@ -154,7 +154,9 @@ public class DockerCreator {
     private static Map<Integer, Integer> getMappedPorts(final Ports containerPorts) {
         final HashMap<Integer, Integer> ports = new HashMap<>();
 
-        containerPorts.getBindings().entrySet().forEach(m -> ports.put(m.getKey().getPort(), Integer.valueOf(m.getValue()[0].getHostPortSpec())));
+        for (final Map.Entry<ExposedPort, Ports.Binding[]> m : containerPorts.getBindings().entrySet()) {
+            ports.put(m.getKey().getPort(), Integer.valueOf(m.getValue()[0].getHostPortSpec()));
+        }
 
         return ports;
     }
