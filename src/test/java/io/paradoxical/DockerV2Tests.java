@@ -18,6 +18,7 @@ public class DockerV2Tests {
                 DockerClientConfig.builder()
                                   .imageName("rabbitmq:management")
                                   .port(5672)
+                                  .pullAlways(true)
                                   .waitForLogLine("Server startup complete")
                                   .build();
 
@@ -35,6 +36,7 @@ public class DockerV2Tests {
                 DockerClientConfig.builder()
                                   .imageName("java:8")
                                   .port(5672)
+                                  .pullAlways(true)
                                   .arguments("echo foo")
                                   .build();
 
@@ -54,12 +56,14 @@ public class DockerV2Tests {
         final Container one = DockerCreator.build(DockerClientConfig.builder()
                                                                     .imageName("elasticsearch:1.5.2")
                                                                     .waitForLogLine("started")
+                                                                    .pullAlways(true)
                                                                     .port(9200)
                                                                     .build());
 
         final Container two = DockerCreator.build(DockerClientConfig.builder()
                                                                     .imageName("elasticsearch:1.5.2")
                                                                     .waitForLogLine("started")
+                                                                    .pullAlways(true)
                                                                     .port(9200)
                                                                     .build());
 
@@ -90,6 +94,7 @@ public class DockerV2Tests {
                 DockerClientConfig.builder()
                                   .imageName("vsouza/dynamo-local")
                                   .port(8080)
+                                  .pullAlways(true)
                                   .waitForLogLine("Listening at")
                                   .arguments("--port 8080 --createTableMs 5 --deleteTableMs 5 --updateTableMs 5")
                                   .build()
@@ -103,6 +108,7 @@ public class DockerV2Tests {
 
         final DockerClientConfig config =
                 DockerClientConfig.builder()
+                                  .pullAlways(true)
                                   .imageName("redis:2.8.23")
                                   .waitForLogLine("The server is now ready to accept connections on port 6379", LogLineMatchFormat.Exact, 5)
                                   .port(6379)
