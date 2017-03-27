@@ -39,7 +39,7 @@ public class Container implements AutoCloseable {
         final LogContainerResultCallback resultCallback = new LogContainerResultCallback() {
             @Override
             public void onNext(final Frame item) {
-                stringBuilder.append(item.toString());
+                stringBuilder.append(item.toString() + System.lineSeparator());
             }
         };
 
