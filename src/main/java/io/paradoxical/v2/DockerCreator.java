@@ -10,7 +10,6 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.LxcConf;
 import com.github.dockerjava.api.model.Ports;
-import com.github.dockerjava.core.AuthConfigFile;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
@@ -40,7 +39,22 @@ public class DockerCreator {
         return build(config, null);
     }
 
+    public static DockerClient defaultClient() {
+        final DefaultDockerClientConfig dockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+
+        return DockerClientBuilder.getInstance(dockerClientConfig).build();
+    }
+
     public static Container build(DockerClientConfig config, AuthConfig authConfig) throws InterruptedException, DockerException {
+        return build(config, authConfig, defaultClient(), DefaultDockerClientConfig.createDefaultConfigBuilder().build());
+    }
+
+    public static Container build(
+            DockerClientConfig config,
+            AuthConfig authConfig,
+            DockerClient client,
+            DefaultDockerClientConfig clientConfig
+    ) throws InterruptedException, DockerException {
 
         final Ports ports = new Ports();
 
@@ -51,10 +65,6 @@ public class DockerCreator {
         for (Integer transientPort : config.getTransientPorts()) {
             ports.bind(ExposedPort.tcp(transientPort), Ports.Binding.bindPort(random.nextInt(30000) + 15000));
         }
-
-        final DefaultDockerClientConfig dockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
-
-        final DockerClient client = DockerClientBuilder.getInstance(dockerClientConfig).build();
 
         final CreateContainerCmd createContainerCmd =
                 client.createContainerCmd(config.getImageName())
@@ -79,13 +89,15 @@ public class DockerCreator {
                 pullImageCmd.withAuthConfig(authConfig);
             }
             else {
-                setAuthFromFile(pullImageCmd, dockerClientConfig, config.getImageName());
+                setAuthFromFile(pullImageCmd, clientConfig, config.getImageName());
             }
 
             pullImageCmd.exec(pullImageResultCallback);
 
             pullImageResultCallback.awaitSuccess();
         }
+
+        config.getContainerConfigurator().configure(createContainerCmd);
 
         final CreateContainerResponse containerResponse = createContainerCmd.exec();
 
@@ -99,7 +111,7 @@ public class DockerCreator {
 
         logger.info("Container id " + containerResponse.getId() + " ready");
 
-        return new Container(containerResponse, getMappedPorts(ports), getHost(dockerClientConfig.getDockerHost()), client);
+        return new Container(containerResponse, getMappedPorts(ports), getHost(clientConfig.getDockerHost()), client);
     }
 
     private static void setAuthFromFile(final PullImageCmd pullImageCmd, final DefaultDockerClientConfig dockerClientConfig, final String imageName) {

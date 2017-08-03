@@ -1,5 +1,8 @@
 package io.paradoxical;
 
+import com.github.dockerjava.api.command.CreateContainerCmd;
+import io.paradoxical.v2.ContainerConfigurator;
+import io.paradoxical.v2.NullConfigurator;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Value;
@@ -35,6 +38,8 @@ public class DockerClientConfig {
 
     private Integer maxWaitLogSeconds = 60;
 
+    private ContainerConfigurator containerConfigurator = new NullConfigurator();
+
     public static DockerClientConfigBuilder builder() {return new DockerClientConfigBuilder();}
 
     public static class DockerClientConfigBuilder {
@@ -49,6 +54,7 @@ public class DockerClientConfig {
         private String containerName;
         private LogLineMatchFormat matchFormat = LogLineMatchFormat.Exact;
         private Integer maxWaitLogSeconds = 60;
+        private ContainerConfigurator containerConfigurator = new NullConfigurator();
 
         DockerClientConfigBuilder() {}
 
@@ -115,6 +121,12 @@ public class DockerClientConfig {
             return this;
         }
 
+        DockerClientConfig.DockerClientConfigBuilder containerConfigurator(final ContainerConfigurator  configurator) {
+            this.containerConfigurator = configurator;
+            return this;
+        }
+
+
         public DockerClientConfig build() {
             return new DockerClientConfig(dockerMachineUrl == null ? DOCKER_MACHINE_SERVICE_URL : dockerMachineUrl,
                                           imageName,
@@ -126,7 +138,8 @@ public class DockerClientConfig {
                                           pullAlways,
                                           containerName,
                                           matchFormat,
-                                          maxWaitLogSeconds);
+                                          maxWaitLogSeconds,
+                                          containerConfigurator);
         }
     }
 }
