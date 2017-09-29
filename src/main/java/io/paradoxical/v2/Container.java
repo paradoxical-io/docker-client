@@ -68,7 +68,10 @@ public class Container implements AutoCloseable {
                 // no-op
             }
 
-            client.removeContainerCmd(containerInfo.getId()).exec();
+            client.removeContainerCmd(containerInfo.getId())
+                  .withForce(true)
+                  .withRemoveVolumes(true)
+                  .exec();
 
             client.close();
         }
