@@ -13,7 +13,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Ignore
 public class DockerTests {
     @Test
     public void docker_starts() throws InterruptedException, DockerException, DockerCertificateException, IOException {

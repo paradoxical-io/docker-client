@@ -2,7 +2,6 @@ package io.paradoxical;
 
 import com.google.common.base.Splitter;
 import com.spotify.docker.client.DefaultDockerClient;
-import com.spotify.docker.client.DockerCertificates;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogMessage;
 import com.spotify.docker.client.LogStream;
@@ -18,11 +17,8 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,7 +29,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import static com.spotify.docker.client.DockerClient.AttachParameter.LOGS;
 import static com.spotify.docker.client.DockerClient.AttachParameter.STDERR;
@@ -48,7 +43,6 @@ public class DockerCreator {
     private static final Logger logger = LoggerFactory.getLogger(DockerCreator.class);
 
     private static final Random random = new Random();
-    private static boolean dockerNative;
 
     public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
         return new DockerCreator().create(config);
@@ -256,34 +250,19 @@ public class DockerCreator {
     }
 
     protected static DockerClient createDockerClient(DockerClientConfig config) {
-        if (Env.isUnix() || Env.isDockerNative() || System.getenv("DOCKER_HOST") != null) {
-            try {
-                return DefaultDockerClient.fromEnv().registryAuth(getRegistryAuth(config)).build();
-            }
-            catch (DockerCertificateException e) {
-                System.err.println(e.getMessage());
-            }
-        }
+        final RegistryAuth registryAuth = getRegistryAuth(config);
 
-        DockerCertificates dockerCertificates = null;
         try {
-            String userHome = System.getProperty("user.home");
-            dockerCertificates = new DockerCertificates(Paths.get(userHome, ".docker/machine/certs"));
+            if (registryAuth != null) {
+                return DefaultDockerClient.fromEnv().registryAuth(registryAuth).build();
+            }
+            else {
+                return DefaultDockerClient.fromEnv().build();
+            }
         }
         catch (DockerCertificateException e) {
-            System.err.println(e.getMessage());
+            throw new RuntimeException(e);
         }
-
-        final String dockerMachineUrl =
-                config.getDockerMachineUrl() == null ?
-                DockerClientConfig.DOCKER_MACHINE_SERVICE_URL :
-                config.getDockerMachineUrl();
-
-        return DefaultDockerClient.builder()
-                                  .registryAuth(getRegistryAuth(config))
-                                  .uri(URI.create(dockerMachineUrl))
-                                  .dockerCertificates(dockerCertificates)
-                                  .build();
     }
 
     private static RegistryAuth getRegistryAuth(final DockerClientConfig config) {
