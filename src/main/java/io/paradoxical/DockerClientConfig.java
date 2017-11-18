@@ -121,7 +121,7 @@ public class DockerClientConfig {
             return this;
         }
 
-        DockerClientConfig.DockerClientConfigBuilder containerConfigurator(final ContainerConfigurator  configurator) {
+        public DockerClientConfig.DockerClientConfigBuilder containerConfigurator(final ContainerConfigurator  configurator) {
             this.containerConfigurator = configurator;
             return this;
         }
