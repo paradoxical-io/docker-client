@@ -5,11 +5,8 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.LogContainerCmd;
 import com.github.dockerjava.api.command.PullImageCmd;
-import com.github.dockerjava.api.model.AuthConfig;
-import com.github.dockerjava.api.model.ExposedPort;
-import com.github.dockerjava.api.model.Frame;
-import com.github.dockerjava.api.model.LxcConf;
-import com.github.dockerjava.api.model.Ports;
+import com.github.dockerjava.api.exception.InternalServerErrorException;
+import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
@@ -22,6 +19,8 @@ import io.paradoxical.MappedPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,7 +62,15 @@ public class DockerCreator {
         }
 
         for (Integer transientPort : config.getTransientPorts()) {
-            ports.bind(ExposedPort.tcp(transientPort), Ports.Binding.bindPort(random.nextInt(30000) + 15000));
+            int port = random.nextInt(30000) + 15000;
+            try {
+                ServerSocket serverSocket = new ServerSocket(0);
+                port = serverSocket.getLocalPort();
+                serverSocket.close();
+            } catch (IOException e) {
+                logger.warn("Unable to acquire an available port from the OS, falling back to a random port.");
+            }
+            ports.bind(ExposedPort.tcp(transientPort), Ports.Binding.bindPort(port));
         }
 
         final CreateContainerCmd createContainerCmd =
