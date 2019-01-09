@@ -87,8 +87,8 @@ public class DockerCreator {
 
         Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
-        for (Integer port : config.getTransientPorts()) {
-            portBindings.put(port.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", random.nextInt(30000) + 15000)));
+        for (Integer transientPort : config.getTransientPorts()) {
+            portBindings.put(transientPort.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", PortGenerator.getNextAvailablePort())));
         }
 
         for (MappedPort mappedPort : config.getMappedPorts()) {
