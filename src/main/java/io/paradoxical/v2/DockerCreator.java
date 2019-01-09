@@ -23,14 +23,11 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class DockerCreator {
     private static final Logger logger = LoggerFactory.getLogger(io.paradoxical.DockerCreator.class);
-
-    private static Random random = new Random();
 
     public static Container build(DockerClientConfig config) throws DockerException, InterruptedException {
         return build(config, null);
