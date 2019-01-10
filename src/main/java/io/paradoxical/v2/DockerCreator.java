@@ -5,7 +5,6 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.LogContainerCmd;
 import com.github.dockerjava.api.command.PullImageCmd;
-import com.github.dockerjava.api.exception.InternalServerErrorException;
 import com.github.dockerjava.api.model.*;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
@@ -16,23 +15,19 @@ import io.paradoxical.DockerClientConfig;
 import io.paradoxical.EnvironmentVar;
 import io.paradoxical.LogMatcher;
 import io.paradoxical.MappedPort;
+import io.paradoxical.PortGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class DockerCreator {
     private static final Logger logger = LoggerFactory.getLogger(io.paradoxical.DockerCreator.class);
-
-    private static Random random = new Random();
 
     public static Container build(DockerClientConfig config) throws DockerException, InterruptedException {
         return build(config, null);
@@ -62,15 +57,7 @@ public class DockerCreator {
         }
 
         for (Integer transientPort : config.getTransientPorts()) {
-            int port = random.nextInt(30000) + 15000;
-            try {
-                ServerSocket serverSocket = new ServerSocket(0);
-                port = serverSocket.getLocalPort();
-                serverSocket.close();
-            } catch (IOException e) {
-                logger.warn("Unable to acquire an available port from the OS, falling back to a random port.");
-            }
-            ports.bind(ExposedPort.tcp(transientPort), Ports.Binding.bindPort(port));
+            ports.bind(ExposedPort.tcp(transientPort), Ports.Binding.bindPort(PortGenerator.getNextAvailablePort()));
         }
 
         final CreateContainerCmd createContainerCmd =

@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +40,6 @@ import static com.spotify.docker.client.DockerClient.AttachParameter.STREAM;
 @Deprecated()
 public class DockerCreator {
     private static final Logger logger = LoggerFactory.getLogger(DockerCreator.class);
-
-    private static final Random random = new Random();
 
     public static Container build(DockerClientConfig config) throws InterruptedException, DockerException {
         return new DockerCreator().create(config);
@@ -87,8 +84,8 @@ public class DockerCreator {
 
         Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
-        for (Integer port : config.getTransientPorts()) {
-            portBindings.put(port.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", random.nextInt(30000) + 15000)));
+        for (Integer transientPort : config.getTransientPorts()) {
+            portBindings.put(transientPort.toString(), Collections.singletonList(PortBinding.of("0.0.0.0", PortGenerator.getNextAvailablePort())));
         }
 
         for (MappedPort mappedPort : config.getMappedPorts()) {
